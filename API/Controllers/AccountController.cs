@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Unicode;
-using System.Threading.Tasks;
 using API.Data;
 using API.DTOs;
 using API.Entities;
 using API.Interfaces;
-using API.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +13,7 @@ namespace API.Controllers
     {   
         private readonly DataContext _context;
         private readonly ITokenService _tokenService;
+        private readonly UserRepository _userRepository;
         public AccountController(DataContext context, ITokenService tokenService)
         {
             _tokenService = tokenService;
@@ -52,7 +46,8 @@ namespace API.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
         {
-            var user = await _context.User.SingleOrDefaultAsync(x=> x.UserName == loginDto.Username);
+            var user = await _context.User.Include(x=>x.Photos)          
+                                        .SingleOrDefaultAsync(x=> x.UserName == loginDto.Username);
 
             if(user == null) return Unauthorized("Invalid Username");
 
@@ -67,7 +62,8 @@ namespace API.Controllers
              return new UserDto
             {
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user)
+                Token = _tokenService.CreateToken(user),
+                PhotoUrl = user.Photos.FirstOrDefault(x=>x.IsMain)?.Url
             };
         }
 
